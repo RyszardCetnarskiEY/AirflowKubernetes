@@ -31,7 +31,7 @@ RAW_XML_TABLE_NAME = "entsoe_raw_xml_landing" # Changed name for clarity
 
 def _generate_run_parameters_logic(data_interval_start, data_interval_end):
     """Core logic extracted for testing"""
-    from entsoe_dag_config import ENTSOE_VARIABLES, COUNTRY_MAPPING 
+    from tasks.entsoe_dag_config import ENTSOE_VARIABLES, COUNTRY_MAPPING 
     task_params = []
     
     for var_name, entsoe_params_dict in ENTSOE_VARIABLES.items():
