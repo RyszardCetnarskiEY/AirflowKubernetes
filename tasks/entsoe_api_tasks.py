@@ -81,6 +81,11 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
 
     http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
     conn = http_hook.get_connection("ENTSOE")
+    print(f"[DEBUG] conn.host = {conn.host}")
+    print(f"[DEBUG] conn.password = {conn.password}")
+
+    http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
+    conn = http_hook.get_connection("ENTSOE")
     api_key = conn.password
 
     api_request_params = {
