@@ -85,6 +85,10 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
     # print(f"[DEBUG] conn.password = {conn.password}")
     logger.info(f"[DEBUG] conn.host = {conn.host}")
     logger.info(f"[DEBUG] conn.password = {conn.password}")
+    logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
+    
+    assert api_key.strip() == api_key  # Should not raise!
+
 
     http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
     conn = http_hook.get_connection("ENTSOE")
@@ -96,6 +100,9 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
         **api_kwargs
     }
     base_url = conn.host.rstrip("/")  
+
+    logger.info(f"REQUEST URL: {base_url}, PARAMS: {api_request_params}")
+
 
     # Added because I think airflow UI connections and one defined in helm chart behave slightly differently
     # rstrip chyba nic nie robi, do usunięcia
