@@ -85,13 +85,15 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
     # print(f"[DEBUG] conn.password = {conn.password}")
     logger.info(f"[DEBUG] conn.host = {conn.host}")
     logger.info(f"[DEBUG] conn.password = {conn.password!r}")
-    logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
     
 
 
     http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
     conn = http_hook.get_connection("ENTSOE")
     api_key = conn.password
+    logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
+    logger.info(f"securityToken: {api_key[0:10]!r}")  # the !r will show hidden chars
+    logger.info(f"securityToken: {api_key[10::]!r}")  # the !r will show hidden chars
 
     api_request_params = {
         "securityToken": api_key,
