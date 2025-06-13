@@ -31,7 +31,7 @@ from tasks.sql_tasks import load_to_staging_table, merge_data_to_production, cre
 from tasks.xml_processing_tasks import store_raw_xml, parse_xml
 
 
-HISTORICAL_START_DATE = datetime(2025, 1, 1, tz="UTC")
+HISTORICAL_START_DATE = datetime(2021, 1, 1, tz="UTC")
 
 #logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ print('TODO - move to taskGroup one day and share some tasks for other variables
     start_date=HISTORICAL_START_DATE, # CRITICAL: Use timezone-aware datetime
     catchup=True,
     tags=['entsoe', 'energy', 'api', 'etl', 'dynamic'],
-    max_active_runs=1, # Limit to 1 active DAG run to avoid overwhelming API/DB during backfill
+    max_active_runs=20, # Limit to 1 active DAG run to avoid overwhelming API/DB during backfill
     doc_md=__doc__ 
 )
 def entsoe_dynamic_etl_pipeline():
