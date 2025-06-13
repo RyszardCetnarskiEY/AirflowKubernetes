@@ -87,7 +87,6 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
     logger.info(f"[DEBUG] conn.password = {conn.password}")
     logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
     
-    assert api_key.strip() == api_key  # Should not raise!
 
 
     http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
@@ -112,6 +111,8 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
         base_url = f"https://{conn.host.rstrip('/')}"+'/api'
 
     logger.info(f"[DEBUG] base_url= {base_url}")
+
+    assert api_key.strip() == api_key  # Should not raise!
 
     # Logging context
     log_str = (
