@@ -84,7 +84,7 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
     # print(f"[DEBUG] conn.host = {conn.host}")
     # print(f"[DEBUG] conn.password = {conn.password}")
     logger.info(f"[DEBUG] conn.host = {conn.host}")
-    logger.info(f"[DEBUG] conn.password = {conn.password}")
+    logger.info(f"[DEBUG] conn.password = {conn.password!r}")
     logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
     
 
