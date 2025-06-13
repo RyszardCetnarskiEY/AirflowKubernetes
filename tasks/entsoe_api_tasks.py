@@ -99,7 +99,7 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
 
     # Added because I think airflow UI connections and one defined in helm chart behave slightly differently
     if conn.host.startswith('http'):
-        base_url = conn.host.rstrip("/")
+        base_url = conn.host.rstrip("/")+'/api'
     else:
         base_url = f"https://{conn.host.rstrip('/')}"
 
