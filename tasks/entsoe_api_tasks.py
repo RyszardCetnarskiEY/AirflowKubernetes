@@ -96,6 +96,15 @@ def extract_from_api(task_param: Dict[str, Any],**context) -> str:
         **api_kwargs
     }
     base_url = conn.host.rstrip("/")  
+
+    # Added because I think airflow UI connections and one defined in helm chart behave slightly differently
+    if conn.host.startswith('http'):
+        base_url = conn.host.rstrip("/")
+    else:
+        base_url = f"https://{conn.host.rstrip('/')}"
+
+    logger.info(f"[DEBUG] base_url= {base_url}")
+
     # Logging context
     log_str = (
         f"{task_run_metadata['var_name']} {task_run_metadata['country_name']} "
