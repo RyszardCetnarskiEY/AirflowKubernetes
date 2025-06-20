@@ -65,73 +65,63 @@ def generate_run_parameters(**context) -> List[Dict[str, str]]:
     logger.info(f"Generated {len(task_params)} parameter sets for data interval: {data_interval_start.to_date_string()} - {data_interval_end.to_date_string()}")
     return task_params
 
+def _entsoe_http_connection_setup():
+    http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
+    conn = http_hook.get_connection("ENTSOE")
+    api_key = conn.password
+
+    logger.info(f"securityToken: {api_key[0:10]!r}")  # the !r will show hidden chars
+    logger.info(f"securityToken: {api_key[10::]!r}")  # the !r will show hidden chars
+
+    base_url = conn.host.rstrip("/")# rstrip chyba nic nie robi, do usunięcia
+    # Todo, do I need to define this connection anew every task instance?
+    if conn.host.startswith('http'):
+        base_url = conn.host.rstrip("/")
+    else:
+        base_url = f"https://{conn.host.rstrip('/')}"+'/api'    # Added because I think airflow UI connections and one defined in helm chart behave slightly differently
+
+    logger.info(f"[DEBUG] REQUEST URL: {base_url}")
+
+    return base_url, api_key, conn, http_hook
+
+def _get_entsoe_response(log_str, api_request_params):
+    logger.info(f"Fetching data for {log_str}")
+    base_url, api_key, conn, http_hook = _entsoe_http_connection_setup()
+
+    api_request_params = {
+        "securityToken": api_key,
+        **api_request_params,
+    }
+    session = http_hook.get_conn()
+    response = session.get(base_url, params=api_request_params, timeout=60)
+
+    response.raise_for_status()
+    response.encoding = 'utf-8'  # explicitly set encoding if not set
+    return response
+
 @task(task_id='extract_from_api')
 def extract_from_api(task_param: Dict[str, Any],**context) -> str:
     """
     Fetches data from the ENTSOE API for a given country and period.
     api_params is expected to be a dict with 'periodStart', 'periodEnd', 'country_code'.
     """
-
     entsoe_api_params = task_param["entsoe_api_params"]
     task_run_metadata = task_param["task_run_metadata"]
-
     api_kwargs = {}
     if task_run_metadata["var_name"] == "Energy Prices fixing I":
         api_kwargs["out_Domain"] =  entsoe_api_params["in_Domain"]
 
-    http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
-    conn = http_hook.get_connection("ENTSOE")
-    # print(f"[DEBUG] conn.host = {conn.host}")
-    # print(f"[DEBUG] conn.password = {conn.password}")
-    logger.info(f"[DEBUG] conn.host = {conn.host}")
-    logger.info(f"[DEBUG] conn.password = {conn.password!r}")
-    
+    api_request_params = dict(entsoe_api_params, **api_kwargs)
 
-
-    http_hook = HttpHook(method='GET', http_conn_id="ENTSOE")
-    conn = http_hook.get_connection("ENTSOE")
-    api_key = conn.password
-    logger.info(f"securityToken: {api_key!r}")  # the !r will show hidden chars
-    logger.info(f"securityToken: {api_key[0:10]!r}")  # the !r will show hidden chars
-    logger.info(f"securityToken: {api_key[10::]!r}")  # the !r will show hidden chars
-
-    api_request_params = {
-        "securityToken": api_key,
-        **entsoe_api_params,
-        **api_kwargs
-    }
-    base_url = conn.host.rstrip("/")  
-
-    logger.info(f"REQUEST URL: {base_url}, PARAMS: {api_request_params}")
-
-
-    # Added because I think airflow UI connections and one defined in helm chart behave slightly differently
-    # rstrip chyba nic nie robi, do usunięcia
-    if conn.host.startswith('http'):
-        base_url = conn.host.rstrip("/")
-    else:
-        base_url = f"https://{conn.host.rstrip('/')}"+'/api'
-
-    logger.info(f"[DEBUG] base_url= {base_url}")
-
-    assert api_key.strip() == api_key  # Should not raise!
-
-    # Logging context
     log_str = (
         f"{task_run_metadata['var_name']} {task_run_metadata['country_name']} "
         f"({entsoe_api_params['in_Domain']}) for period: {entsoe_api_params['periodStart']} - {entsoe_api_params['periodEnd']}"
     )
     
-    final_params = dict(api_request_params, **api_kwargs)
     try:
-        logger.info(f"Fetching data for {log_str}")
-        session = http_hook.get_conn()
-        response = session.get(base_url, params=api_request_params, timeout=60)
-
-        response.raise_for_status()
-        response.encoding = 'utf-8'  # explicitly set encoding if not set
-
+        response = _get_entsoe_response(log_str, api_request_params)
         logger.info(f"Successfully extracted data for  {log_str}")
+        
         return {
             'xml_content': response.text,
             # 'xml_bytes': response.content, #TODO a bit heavy, choose one, content or text

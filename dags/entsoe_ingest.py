@@ -31,7 +31,7 @@ from tasks.sql_tasks import load_to_staging_table, merge_data_to_production, cre
 from tasks.xml_processing_tasks import store_raw_xml, parse_xml
 
 
-HISTORICAL_START_DATE = datetime(2021, 1, 1, tz="UTC")
+HISTORICAL_START_DATE = datetime(2022, 12, 19, tz="UTC")
 
 #logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ def zip_df_and_params(
 
 
 
-print('TODO - move to taskGroup one day and share some tasks for other variables, like generating units operation points')
+print('TODO - move to taTODO - move to taskGroup one day and share some tasks for other variables, like generating units operation pointskGroup one day and share some tasks for other variables, like generating units operation points')
 # A more advanced pattern could be a TaskGroup that is mapped.
 
 @dag(

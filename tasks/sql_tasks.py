@@ -35,19 +35,27 @@ def load_to_staging_table(df_and_params: Dict[str, Any], **context) -> str:
 
     df = df_and_params['df']
     task_param = df_and_params['params']
+    import random
 
+    import hashlib 
+    run_id = context['dag_run'].run_id
+    run_hash = hashlib.sha1(run_id.encode()).hexdigest()[:8]  # Short, unique suffix
+    random_number = a = random.randint(0, 100000)
     if df.empty:
         logger.info(f"Skipping load to staging for {task_param['task_run_metadata']['country_name']} {task_param['entsoe_api_params']['periodStart']} as DataFrame is empty.")
         return f"empty_staging_{task_param['task_run_metadata']['country_code']}_{task_param['periodStart']}"
 
     df = df.drop("Position", axis=1)
-    #id_vars = ["timestamp", "year", "quarter", "month", "day", "dayofweek", "hour", "area_code", "Resolution"]
-    #df = pd.melt(df, id_vars = id_vars, value_name = 'quantity').copy()
     df['quantity'] = pd.to_numeric(df.loc[:, 'quantity'], errors='coerce').astype(float)
     
     dag_run_id_safe = context['dag_run'].run_id.replace(':', '_').replace('+', '_').replace('.', '_').replace('-', '_')
-    staging_table = f"stg_entsoe_{task_param['task_run_metadata']['country_code']}_{task_param['entsoe_api_params']['periodStart']}_{dag_run_id_safe}"[:63] # Max PG table name length
+    #staging_table = f"stg_entsoe_{task_param['task_run_metadata']['country_code']}_{task_param['entsoe_api_params']['periodStart']}_{dag_run_id_safe}"[:63] # Max PG table name length
+    staging_table = f"stg_entsoe_{task_param['task_run_metadata']['country_code']}_{task_param['entsoe_api_params']['periodStart']}_{random_number}"
+
     staging_table = "".join(c if c.isalnum() else "_" for c in staging_table) # Sanitize
+
+    staging_table = staging_table[:63]  # Optional safeguard
+
 
 
     logger.info(f"Loading {len(df)} records to staging table: airflow_data.\"{staging_table}\" for {task_param['task_run_metadata']['country_name']}")
@@ -64,7 +72,11 @@ def load_to_staging_table(df_and_params: Dict[str, Any], **context) -> str:
     create_stmt = f"""CREATE TABLE airflow_data."{staging_table}" (id SERIAL PRIMARY KEY, {', '.join(create_table_columns)}, processed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);"""
     drop_stmt = f"""DROP TABLE IF EXISTS airflow_data."{staging_table}";"""
     pg_hook.run(drop_stmt) # Ensure clean slate for this run_id specific table
+    pg_hook.get_conn().commit()
+
     pg_hook.run(create_stmt)
+
+    pg_hook.get_conn().commit()
 
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, header=True)
@@ -93,7 +105,7 @@ def merge_data_to_production(staging_dict: Dict[str, Any], db_conn_id: str):
     pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 
     _create_prod_table(production_table_name)
-
+    #TODO - check Iif it should be changed into upsert, unless ON CONFLICT DO UPDATE kind'a replicates upsert
     merge_sql = f"""
         INSERT INTO airflow_data."{production_table_name}" (
             "timestamp", "resolution", "year", "quarter", "month", "day",
