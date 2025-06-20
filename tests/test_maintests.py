@@ -50,7 +50,7 @@ def test_http_connection(mock_http_hook_class):
 
     mock_http_hook = MagicMock()
     mock_conn = MagicMock()
-    
+
     mock_conn.password = "dummy_token"
     mock_conn.host = "web-api.tp.entsoe.eu"
 
@@ -79,7 +79,7 @@ def test_http_connection(mock_http_hook_class):
 #     assert type(response)==dict
 #     assert response['status_code'] == 200
 
-@patch("dags.entsoe_ingest.HttpHook")
+@patch("tasks.entsoe_api_tasks.HttpHook")  # ✅ correct path
 def test_extract_from_api_with_mocked_http(
     mock_http_hook_class, sample_xml_response, test_param, airflow_context
 ):
