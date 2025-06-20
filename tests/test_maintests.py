@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-from tasks.entsoe_api_tasks import _generate_run_parameters_logic, _entsoe_http_connection_setup, _get_entsoe_response
+from tasks.entsoe_api_tasks import _generate_run_parameters_logic, _get_entsoe_response
 
 from dags.entsoe_ingest import extract_from_api, store_raw_xml, parse_xml, add_timestamp_column, add_timestamp_elements, combine_df_and_params, load_to_staging_table, merge_data_to_production, cleanup_staging_tables
 
@@ -44,8 +44,21 @@ def airflow_context():
     test_context['dag_run'] =  type('MockDagRun', (), {'run_id': 'test_1234'})()
     return test_context
 
-def test_http_connection():
-    base_url, api_key, con, http_hook = _entsoe_http_connection_setup()
+
+@patch("tasks.entsoe_api_tasks.HttpHook")
+def test_http_connection(mock_http_hook_class):
+
+    mock_http_hook = MagicMock()
+    mock_conn = MagicMock()
+    
+    mock_conn.password = "dummy_token"
+    mock_conn.host = "web-api.tp.entsoe.eu"
+
+    mock_http_hook.get_connection.return_value = mock_conn
+    mock_http_hook_class.return_value = mock_http_hook
+
+    from tasks.entsoe_api_tasks import _entsoe_http_connection_setup
+    base_url, api_key, conn, http_hook = _entsoe_http_connection_setup()
 
     assert api_key.strip() == api_key  # Should not raise!
     assert base_url == "https://web-api.tp.entsoe.eu/api"
