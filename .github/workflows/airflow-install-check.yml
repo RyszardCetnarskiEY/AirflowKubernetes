@@ -1,0 +1,27 @@
+name: Validate Airflow Install (Python 3.12)
+
+on:
+  workflow_dispatch:  # manual trigger for now
+
+jobs:
+  install-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies with constraints
+        run: |
+          python -m pip install --upgrade pip
+          pip install apache-airflow[postgres]==2.9.3 \
+            --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.12.txt
+
+      - name: Check Airflow install
+        run: |
+          airflow version
