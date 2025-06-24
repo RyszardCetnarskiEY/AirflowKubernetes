@@ -13,9 +13,7 @@ RAW_XML_TABLE_NAME = "entsoe_raw_xml_landing"  # Changed name for clarity
 
 
 @task(task_id="load_to_staging_table")
-def load_to_staging_table(
-    df_and_params: Dict[str, Any], **context
-) -> Union[Dict[str, Any], str]:
+def load_to_staging_table(df_and_params: Dict[str, Any], **context) -> Union[Dict[str, Any], str]:
     df = df_and_params["df"]
     task_param = df_and_params["params"]
 
@@ -32,9 +30,7 @@ def load_to_staging_table(
 
     staging_table = f"stg_entsoe_{task_param['task_run_metadata']['country_code']}_{task_param['entsoe_api_params']['periodStart']}_{random_number}"
 
-    staging_table = "".join(
-        c if c.isalnum() else "_" for c in staging_table
-    )  # Sanitize
+    staging_table = "".join(c if c.isalnum() else "_" for c in staging_table)  # Sanitize
 
     staging_table = staging_table[:63]  # Optional safeguard
 
@@ -89,9 +85,7 @@ def merge_data_to_production(staging_dict: Dict[str, Any], db_conn_id: str):
     staging_table_name = staging_dict["staging_table_name"]
     production_table_name = staging_dict["var_name"].replace(" ", "_").lower()
     if staging_table_name.startswith("empty_staging_"):
-        logger.info(
-            f"Skipping merge for empty/failed staging data: {staging_table_name}"
-        )
+        logger.info(f"Skipping merge for empty/failed staging data: {staging_table_name}")
         return f"Skipped merge for {staging_table_name}"
     pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 
@@ -127,9 +121,7 @@ def merge_data_to_production(staging_dict: Dict[str, Any], db_conn_id: str):
             f'Successfully merged data from airflow_data."{staging_table_name}" to airflow_data."{production_table_name}".'
         )
     except Exception as e:
-        logger.error(
-            f"Error merging data from {staging_table_name} to {production_table_name}: {e}"
-        )
+        logger.error(f"Error merging data from {staging_table_name} to {production_table_name}: {e}")
         raise
     return f"Merged {staging_table_name}"
 
@@ -196,6 +188,4 @@ def cleanup_staging_tables(staging_dict: Dict[str, Any], db_conn_id: str):
             pg_hook.run(f'DROP TABLE IF EXISTS airflow_data."{table_name}";')
             logger.info(f'Dropped staging table: airflow_data."{table_name}".')
         except Exception as e:
-            logger.error(
-                f"Error dropping staging table {table_name}: {e}"
-            )  # Log but don't fail DAG
+            logger.error(f"Error dropping staging table {table_name}: {e}")  # Log but don't fail DAG

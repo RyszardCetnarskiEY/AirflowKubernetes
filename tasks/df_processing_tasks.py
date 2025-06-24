@@ -23,9 +23,7 @@ def add_timestamp_column(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
     if "Period_Start" not in df.columns or df["Period_Start"].isnull().all():
-        logger.warning(
-            "Missing 'Period_Start' column or all values are null. Cannot add timestamp."
-        )
+        logger.warning("Missing 'Period_Start' column or all values are null. Cannot add timestamp.")
         df["timestamp"] = pd.NaT
         return df.drop(
             columns=[
@@ -41,9 +39,7 @@ def add_timestamp_column(df: pd.DataFrame) -> pd.DataFrame:
             errors="ignore",
         )
 
-    df["Period_Start_dt"] = pd.to_datetime(
-        df["Period_Start"], utc=True, errors="coerce"
-    )
+    df["Period_Start_dt"] = pd.to_datetime(df["Period_Start"], utc=True, errors="coerce")
 
     def parse_resolution(res):
         if res == "PT60M":
@@ -52,15 +48,11 @@ def add_timestamp_column(df: pd.DataFrame) -> pd.DataFrame:
             return timedelta(minutes=30)
         if res == "PT15M":
             return timedelta(minutes=15)
-        logger.warning(
-            f"Unsupported resolution: {res}, will result in NaT timestamp for affected rows."
-        )
+        logger.warning(f"Unsupported resolution: {res}, will result in NaT timestamp for affected rows.")
         return pd.NaT
 
     df["Resolution_td"] = df["Resolution"].apply(parse_resolution)
-    df["Position"] = (
-        pd.to_numeric(df["Position"], errors="coerce").fillna(0).astype(int)
-    )
+    df["Position"] = pd.to_numeric(df["Position"], errors="coerce").fillna(0).astype(int)
     df["timestamp"] = df["Period_Start_dt"] + (df["Position"] - 1) * df["Resolution_td"]
     df.drop(
         columns=["Period_Start_dt", "Resolution_td", "Period_Start", "Period_End"],
@@ -73,9 +65,7 @@ def add_timestamp_column(df: pd.DataFrame) -> pd.DataFrame:
 @task(task_id="add_timestamp_elements")
 def add_timestamp_elements(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "timestamp" not in df.columns or df["timestamp"].isnull().all():
-        logger.info(
-            "Skipping timestamp element addition for empty or invalid DataFrame."
-        )
+        logger.info("Skipping timestamp element addition for empty or invalid DataFrame.")
         # Ensure columns exist even if empty
         for col in ["year", "quarter", "month", "day", "dayofweek", "hour"]:
             if col not in df.columns:
@@ -86,33 +76,14 @@ def add_timestamp_elements(df: pd.DataFrame) -> pd.DataFrame:
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", utc=True)
 
     valid_timestamps = df["timestamp"].notna()
-    df.loc[valid_timestamps, "year"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.year.astype(int)
-    df.loc[valid_timestamps, "quarter"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.quarter.astype(int)
-    df.loc[valid_timestamps, "month"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.month.astype(int)
-    df.loc[valid_timestamps, "day"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.day.astype(int)
-    df.loc[valid_timestamps, "dayofweek"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.dayofweek.astype(
+    df.loc[valid_timestamps, "year"] = df.loc[valid_timestamps, "timestamp"].dt.year.astype(int)
+    df.loc[valid_timestamps, "quarter"] = df.loc[valid_timestamps, "timestamp"].dt.quarter.astype(int)
+    df.loc[valid_timestamps, "month"] = df.loc[valid_timestamps, "timestamp"].dt.month.astype(int)
+    df.loc[valid_timestamps, "day"] = df.loc[valid_timestamps, "timestamp"].dt.day.astype(int)
+    df.loc[valid_timestamps, "dayofweek"] = df.loc[valid_timestamps, "timestamp"].dt.dayofweek.astype(
         int
     )  # Monday=0, Sunday=6
-    df.loc[valid_timestamps, "hour"] = df.loc[
-        valid_timestamps, "timestamp"
-    ].dt.hour.astype(int)
-    # ###
-    # print("only for testing, comment out")
-    # import os
-    # filename="sample_prices_df_pl_with_timestamp.csv"
-    # path2 = os.path.join("/workspace/myairflowdags/tests/data", filename)
-    # df.to_csv(path2)
-    # ###
+    df.loc[valid_timestamps, "hour"] = df.loc[valid_timestamps, "timestamp"].dt.hour.astype(int)
 
     return df
 

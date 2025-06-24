@@ -29,9 +29,7 @@ def sample_xml_response():
 @pytest.fixture
 def test_param():
     # todo - perfrom testing on all params, not just 0 - perhaps it is best to sace the test_params to json or pickle
-    test_params = _generate_run_parameters_logic(
-        HISTORICAL_START_DATE, HISTORICAL_END_DATE
-    )
+    test_params = _generate_run_parameters_logic(HISTORICAL_START_DATE, HISTORICAL_END_DATE)
     return test_params[0]
 
 
@@ -39,9 +37,7 @@ def test_param():
 def airflow_context():
     test_context = {}
     test_context["logical_date"] = HISTORICAL_START_DATE  # or data_interval_start
-    test_context["data_interval_start"] = (
-        HISTORICAL_START_DATE  # or data_interval_start
-    )
+    test_context["data_interval_start"] = HISTORICAL_START_DATE  # or data_interval_start
     test_context["data_interval_end"] = HISTORICAL_END_DATE  # or data_interval_start
     test_context["dag_run"] = type("MockDagRun", (), {"run_id": "test_1234"})()
     return test_context

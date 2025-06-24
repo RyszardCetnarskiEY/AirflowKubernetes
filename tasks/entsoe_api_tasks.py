@@ -1,11 +1,16 @@
 import json
 import logging
+import os
+import sys
 from typing import Any, Dict, List
 
 import requests
 from airflow.decorators import task
 from airflow.exceptions import AirflowException
 from airflow.providers.http.hooks.http import HttpHook
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+from tasks.entsoe_dag_config import COUNTRY_MAPPING, ENTSOE_VARIABLES
 
 logger = logging.getLogger(__name__)
 POSTGRES_CONN_ID = "postgres_azure_vm"
@@ -14,7 +19,6 @@ RAW_XML_TABLE_NAME = "entsoe_raw_xml_landing"  # Changed name for clarity
 
 def _generate_run_parameters_logic(data_interval_start, data_interval_end):
     """Core logic extracted for testing"""
-    from tasks.entsoe_dag_config import COUNTRY_MAPPING, ENTSOE_VARIABLES
 
     task_params = []
 
@@ -60,7 +64,7 @@ def _entsoe_http_connection_setup():
     api_key = conn.password
 
     logger.info(f"securityToken: {api_key[0:10]!r}")  # the !r will show hidden chars
-    logger.info(f"securityToken: {api_key[10::]!r}")  # the !r will show hidden chars
+    # logger.info(f"securityToken: {api_key[10::]!r}")  # the !r will show hidden chars
 
     base_url = conn.host.rstrip("/")  # rstrip chyba nic nie robi, do usunięcia
     # Todo, do I need to define this connection anew every task instance?
@@ -128,17 +132,13 @@ def extract_from_api(task_param: Dict[str, Any], **context) -> Dict[str, Any]:
             "area_code": entsoe_api_params["in_Domain"],
             "period_start": entsoe_api_params["periodStart"],
             "period_end": entsoe_api_params["periodEnd"],
-            "logical_date_processed": context[
-                "logical_date"
-            ].isoformat(),  # or data_interval_start
+            "logical_date_processed": context["logical_date"].isoformat(),  # or data_interval_start
             "request_params": json.dumps(api_request_params),
             "task_run_metadata": task_run_metadata,
         }
 
     except requests.exceptions.HTTPError as http_err:
-        logger.error(
-            f"HTTP error for {log_str}: {http_err} - Response: {response.text}"
-        )
+        logger.error(f"HTTP error for {log_str}: {http_err} - Response: {response.text}")
         raise AirflowException(
             f"API request failed for {log_str} with status {response.status_code}: {response.text}"
         )

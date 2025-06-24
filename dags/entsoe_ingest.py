@@ -43,9 +43,7 @@ def zip_df_and_params(
     params: list,
 ) -> list[dict]:
     if len(dfs) != len(params):
-        raise ValueError(
-            f"Cannot zip: len(dfs)={len(dfs)} vs len(params)={len(params)}"
-        )
+        raise ValueError(f"Cannot zip: len(dfs)={len(dfs)} vs len(params)={len(params)}")
     return [{"df": df_obj, "task_param": param} for df_obj, param in zip(dfs, params)]
 
 
@@ -69,9 +67,7 @@ print(
 def entsoe_dynamic_etl_pipeline():
     # --- Task Orchestration ---
 
-    initial_setup = create_initial_tables(
-        db_conn_id=POSTGRES_CONN_ID, raw_xml_table=RAW_XML_TABLE_NAME
-    )
+    initial_setup = create_initial_tables(db_conn_id=POSTGRES_CONN_ID, raw_xml_table=RAW_XML_TABLE_NAME)
 
     task_parameters = generate_run_parameters()
 
@@ -102,13 +98,11 @@ def entsoe_dynamic_etl_pipeline():
         db_conn_id=POSTGRES_CONN_ID,
     ).expand(df_and_params=combined_for_staging)
 
-    merged_results = merge_data_to_production.partial(
-        db_conn_id=POSTGRES_CONN_ID
-    ).expand(staging_dict=staging_dict)
-
-    cleanup_task = cleanup_staging_tables.partial(db_conn_id=POSTGRES_CONN_ID).expand(
+    merged_results = merge_data_to_production.partial(db_conn_id=POSTGRES_CONN_ID).expand(
         staging_dict=staging_dict
     )
+
+    cleanup_task = cleanup_staging_tables.partial(db_conn_id=POSTGRES_CONN_ID).expand(staging_dict=staging_dict)
 
     # Set cleanup to run after all merges
     cleanup_task.set_upstream(merged_results)

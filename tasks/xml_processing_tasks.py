@@ -13,9 +13,7 @@ RAW_XML_TABLE_NAME = "entsoe_raw_xml_landing"  # Changed name for clarity
 
 
 @task
-def store_raw_xml(
-    extracted_data: Dict[str, Any], db_conn_id: str, table_name: str
-) -> int:
+def store_raw_xml(extracted_data: Dict[str, Any], db_conn_id: str, table_name: str) -> int:
     if not extracted_data or "xml_content" not in extracted_data:
         logger.warning(
             f"Skipping storage of raw XML due to missing content for params: {extracted_data.get('request_params')}"
@@ -50,9 +48,7 @@ def store_raw_xml(
         )
         return inserted_id
     except Exception as e:
-        logger.error(
-            f"Error storing raw XML for {extracted_data.get('country_name')}: {e}"
-        )
+        logger.error(f"Error storing raw XML for {extracted_data.get('country_name')}: {e}")
         raise
 
 
@@ -63,12 +59,8 @@ def parse_xml(extracted_data: Dict[str, Any]) -> pd.DataFrame:
     area_code = extracted_data["area_code"]
 
     var_name = extracted_data["var_name"]
-    column_name = extracted_data["task_run_metadata"]["config_dict"][
-        "xml_parsing_info"
-    ]["column_name"]
-    var_resolution = extracted_data["task_run_metadata"]["config_dict"][
-        "xml_parsing_info"
-    ]["resolution"]
+    column_name = extracted_data["task_run_metadata"]["config_dict"]["xml_parsing_info"]["column_name"]
+    var_resolution = extracted_data["task_run_metadata"]["config_dict"]["xml_parsing_info"]["resolution"]
     request_params_str = extracted_data["request_params"]
 
     try:
@@ -77,11 +69,7 @@ def parse_xml(extracted_data: Dict[str, Any]) -> pd.DataFrame:
         raise ValueError(f"Invalid XML format: {e}")
 
     # Determine namespace
-    ns = (
-        {"ns": root.tag[root.tag.find("{") + 1 : root.tag.find("}")]}
-        if "{" in root.tag
-        else {}
-    )
+    ns = {"ns": root.tag[root.tag.find("{") + 1 : root.tag.find("}")]} if "{" in root.tag else {}
     print("ns: ", ns)
 
     max_pos = 0
@@ -97,9 +85,7 @@ def parse_xml(extracted_data: Dict[str, Any]) -> pd.DataFrame:
             "variable",
         ]
     )
-    resolutions = [
-        elem.text for elem in root.findall(".//ns:resolution", namespaces=ns)
-    ]
+    resolutions = [elem.text for elem in root.findall(".//ns:resolution", namespaces=ns)]
     found_res = var_resolution in resolutions
     for ts in root.findall("ns:TimeSeries", ns):
         # Determine column name
@@ -153,13 +139,9 @@ def parse_xml(extracted_data: Dict[str, Any]) -> pd.DataFrame:
         # TODO: if constructing a multicolumn dataframe, there is no need to store period start and period end for each column. They will be exactly the same. Either drop duplicates or remove altogether
         partial_df.loc[:, "Period_Start"] = start
         partial_df.loc[:, "Period_End"] = end
-        partial_df.loc[:, "Resolution"] = (
-            resolution  # TODO - fix large and small letters...
-        )
+        partial_df.loc[:, "Resolution"] = resolution  # TODO - fix large and small letters...
         partial_df.loc[:, "variable"] = value_label
-        results_df = pd.concat(
-            [results_df, partial_df.reset_index(drop=False, names="Position")], axis=0
-        )
+        results_df = pd.concat([results_df, partial_df.reset_index(drop=False, names="Position")], axis=0)
         # results_name_dict[value_label] = pd.concat([results_name_dict[value_label], partial_df])
 
     if len(results_df) == 0:

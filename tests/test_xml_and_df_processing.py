@@ -51,15 +51,11 @@ def test_add_timestamp_column(sample_parsed_df, sample_parsed_df_with_timestamp)
     print(parsed_timestamp_df["timestamp"])
     print(sample_parsed_df_with_timestamp["timestamp"])
 
-    assert all(
-        parsed_timestamp_df["timestamp"] == sample_parsed_df_with_timestamp["timestamp"]
-    )
+    assert all(parsed_timestamp_df["timestamp"] == sample_parsed_df_with_timestamp["timestamp"])
 
 
 def test_add_timestamp_elements(sample_parsed_df_with_timestamp):
-    parsed_timestamp_elements_df = add_timestamp_elements.function(
-        sample_parsed_df_with_timestamp
-    )
+    parsed_timestamp_elements_df = add_timestamp_elements.function(sample_parsed_df_with_timestamp)
     print(list(parsed_timestamp_elements_df["year"].unique()))
     assert list(parsed_timestamp_elements_df["year"].unique()) == [2024, 2025]
     assert list(parsed_timestamp_elements_df["month"].unique()) == [12, 1]

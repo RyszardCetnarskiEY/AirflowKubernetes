@@ -27,8 +27,6 @@ def df_and_params():
     filename = "sample_prices_df_pl_with_timestamp.csv"
     path = os.path.join(os.path.dirname(__file__), "data", filename)
     parsed_df = pd.read_csv(path, index_col=0)
-
-    # todo - perfrom testing on all params, not just 0 - perhaps it is best to sace the test_params to json or pickle
     test_params = _generate_run_parameters_logic(HISTORICAL_START_DATE, HISTORICAL_END_DATE)
 
     return {"df": parsed_df, "params": test_params[0]}
@@ -106,11 +104,6 @@ def test_load_to_staging_table_with_data(
     )
     hook.run.assert_any_call(f'DROP TABLE IF EXISTS airflow_data."{expected_table}";')
     assert hook.run.call_count == 2, hook.run.call_count
-
-    # Save to file
-    # import pickle
-    # with open("/workspace/myairflowdags/tests/data/staging_result_prices_pl.pkl", "wb") as f:
-    #     pickle.dump(result, f)
 
     assert cursor.copy_expert.called, cursor.copy_expert.called
 
