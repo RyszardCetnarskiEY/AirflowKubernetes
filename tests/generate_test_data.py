@@ -73,15 +73,13 @@ for test_param in test_params:
     df.to_csv(os.path.join(case_path, "df_no_timestamp.csv"))
 
     df_stamped = add_timestamp_column.function(df)
-    df.to_csv(os.path.join(case_path, "df_timestamp.csv"))
+    df_stamped.to_csv(os.path.join(case_path, "df_timestamp.csv"))
 
-    enriched_dfs = add_timestamp_elements.function(df_stamped)
-    df.to_csv(os.path.join(case_path, "df_timestamp_elements.csv"))
+    enriched_df = add_timestamp_elements.function(df_stamped)
+    enriched_df.to_csv(os.path.join(case_path, "df_timestamp_elements.csv"))
 
-    combined_for_staging = combine_df_and_params.function(df=enriched_dfs, task_param=test_param)
-    staging_dict = load_to_staging_table.function(
-        db_conn_id=POSTGRES_CONN_ID, df_and_params=combined_for_staging, **test_context
-    )
+    combined_for_staging = combine_df_and_params.function(df=enriched_df, task_param=test_param)
+    staging_dict = load_to_staging_table.function(db_conn_id=POSTGRES_CONN_ID, df_and_params=combined_for_staging, **test_context)
 
     with open(os.path.join(case_path, "staging_results_dict.pkl"), "wb") as file:
         pickle.dump(staging_dict, file)

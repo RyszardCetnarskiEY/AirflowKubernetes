@@ -3,7 +3,7 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
-        args: [--line-length=112]
+        args: [--line-length=176]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.0

@@ -1,5 +1,8 @@
+import json
 import os
+import pickle
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,7 +11,6 @@ from pendulum import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from dags.entsoe_ingest import extract_from_api
-from tasks.entsoe_api_tasks import _generate_run_parameters_logic
 
 HISTORICAL_START_DATE = datetime(2025, 1, 1, tz="UTC")
 HISTORICAL_END_DATE = datetime(2025, 1, 2, tz="UTC")
@@ -16,21 +18,20 @@ HISTORICAL_END_DATE = datetime(2025, 1, 2, tz="UTC")
 POSTGRES_CONN_ID = "postgres_azure_vm"
 RAW_XML_TABLE_NAME = "entsoe_raw_xml_landing"  # Changed name for clarity
 
-
-@pytest.fixture
-def sample_xml_response():
-    filename = "sample_entsoe_response_prices_pl.xml"
-    path = os.path.join(os.path.dirname(__file__), "data", filename)
-
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+TEST_CASES_DIR = os.path.join(os.path.join(os.path.dirname(__file__), "test_data"))
+TEST_CASES = [p.name for p in Path(TEST_CASES_DIR).iterdir() if p.is_dir()]
 
 
-@pytest.fixture
-def test_param():
-    # todo - perfrom testing on all params, not just 0 - perhaps it is best to sace the test_params to json or pickle
-    test_params = _generate_run_parameters_logic(HISTORICAL_START_DATE, HISTORICAL_END_DATE)
-    return test_params[0]
+def load_xml_test_data(case_name):
+    case_dir = os.path.join(TEST_CASES_DIR, case_name)
+    input_data = json.load(open(os.path.join(case_dir, "input_params.json")))
+
+    with open(os.path.join(case_dir, "entsoe_xml_response.xml"), "r") as file:
+        expected_xml_output = file.read()
+
+    expected_result_dict = pickle.load(open(os.path.join(case_dir, "whole_response_dict.pkl"), "rb"))
+
+    return input_data, expected_xml_output, expected_result_dict
 
 
 @pytest.fixture()
@@ -63,43 +64,30 @@ def test_http_connection(mock_http_hook_class):
     assert base_url == "https://web-api.tp.entsoe.eu/api"
 
 
+@pytest.mark.parametrize("case_name", TEST_CASES)
 @patch("tasks.entsoe_api_tasks.HttpHook")
-def test_extract_from_api_with_mocked_http(
-    mock_http_hook_class, sample_xml_response, test_param, airflow_context
-):
+def test_extract_from_api(mock_http_hook_class, case_name, airflow_context):
+
+    input_data, expected_xml, expected_result_dict = load_xml_test_data(case_name)
+
     mock_http_hook = MagicMock()
     mock_response = MagicMock()
 
     mock_response.status_code = 200
-    mock_response.text = sample_xml_response
+    mock_response.text = expected_xml
     mock_response.headers.get.return_value = "application/xml"
 
-    mock_http_hook.get_connection.return_value = MagicMock(
-        password="fake_token", host="web-api.tp.entsoe.eu/api"
-    )
+    mock_http_hook.get_connection.return_value = MagicMock(password="fake_token", host="web-api.tp.entsoe.eu/api")
     mock_http_hook.get_conn.return_value.get.return_value = mock_response
     mock_http_hook_class.return_value = mock_http_hook
 
-    result = extract_from_api.function(test_param, **airflow_context)
-
-    # Save dict to file
-    # filename="full_response_prices_pl.json"
-    # path = os.path.join(os.path.dirname(__file__), "data", filename)
-
-    # with open(path, "w") as f:
-    #     json.dump(result, f, indent=4)
-
-    # filename="sample_prices_df_pl.csv"
-    # path2 = os.path.join(os.path.dirname(__file__), "data", filename)
-
-    # df = parse_xml.function(result)
-    # df.to_csv(path2)
+    result = extract_from_api.function(input_data, **airflow_context)
 
     assert result["status_code"] == 200
     assert "xml_content" in result
-    assert "<Publication_MarketDocument" in result["xml_content"]
-    assert result["country_name"] == test_param["task_run_metadata"]["country_name"]
-    assert result["var_name"] == test_param["task_run_metadata"]["var_name"]
-    assert result["area_code"] == test_param["entsoe_api_params"]["in_Domain"]
-    assert result["period_start"] == test_param["entsoe_api_params"]["periodStart"]
-    assert result["period_end"] == test_param["entsoe_api_params"]["periodEnd"]
+    assert "<TimeSeries>" in expected_result_dict["xml_content"]
+    assert result["country_name"] == expected_result_dict["task_run_metadata"]["country_name"]
+    assert result["var_name"] == expected_result_dict["task_run_metadata"]["var_name"]
+    assert result["area_code"] == input_data["entsoe_api_params"]["in_Domain"]
+    assert result["period_start"] == input_data["entsoe_api_params"]["periodStart"]
+    assert result["period_end"] == input_data["entsoe_api_params"]["periodEnd"]
